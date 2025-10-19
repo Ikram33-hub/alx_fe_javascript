@@ -1,8 +1,8 @@
 // ======================
-// Dynamic Quote Generator with Filtering + Web Storage + JSON
+// Dynamic Quote Generator with Filtering + Web Storage + JSON + Server Sync
 // ======================
 
-// Initial quotes array
+// Quotes array (from localStorage or default)
 let quotes = JSON.parse(localStorage.getItem("quotes")) || [
   { text: "The journey of a thousand miles begins with one step.", category: "Motivation" },
   { text: "Code is like humor. When you have to explain it, it’s bad.", category: "Programming" },
@@ -14,6 +14,7 @@ let quotes = JSON.parse(localStorage.getItem("quotes")) || [
 // ======================
 const quoteDisplay = document.getElementById("quoteDisplay");
 const categoryFilter = document.getElementById("categoryFilter");
+const notification = document.getElementById("notification");
 
 // ======================
 // Helper Functions
@@ -22,7 +23,6 @@ function saveQuotes() {
   localStorage.setItem("quotes", JSON.stringify(quotes));
 }
 
-// Display a random quote
 function showRandomQuote() {
   const randomIndex = Math.floor(Math.random() * quotes.length);
   const randomQuote = quotes[randomIndex];
@@ -30,7 +30,6 @@ function showRandomQuote() {
   sessionStorage.setItem("lastViewedQuote", JSON.stringify(randomQuote));
 }
 
-// Add a new quote
 function addQuote() {
   const newQuoteText = document.getElementById("newQuoteText").value.trim();
   const newQuoteCategory = document.getElementById("newQuoteCategory").value.trim();
@@ -51,8 +50,6 @@ function addQuote() {
 // ======================
 // Filtering System
 // ======================
-
-// Populate unique categories dynamically
 function populateCategories() {
   const uniqueCategories = [...new Set(quotes.map(q => q.category))];
   categoryFilter.innerHTML = `<option value="all">All Categories</option>`;
@@ -63,7 +60,6 @@ function populateCategories() {
     categoryFilter.appendChild(option);
   });
 
-  // Restore last selected category if exists
   const lastCategory = localStorage.getItem("selectedCategory");
   if (lastCategory) {
     categoryFilter.value = lastCategory;
@@ -71,7 +67,6 @@ function populateCategories() {
   }
 }
 
-// Filter quotes based on selected category
 function filterQuotes() {
   const selectedCategory = categoryFilter.value;
   localStorage.setItem("selectedCategory", selectedCategory);
@@ -80,7 +75,6 @@ function filterQuotes() {
     ? quotes
     : quotes.filter(q => q.category === selectedCategory);
 
-  // Display filtered quotes
   quoteDisplay.innerHTML = "";
   filteredQuotes.forEach(q => {
     const p = document.createElement("p");
@@ -118,6 +112,41 @@ function importFromJsonFile(event) {
 }
 
 // ======================
+// Server Sync + Conflict Resolution
+// ======================
+async function syncWithServer() {
+  try {
+    const response = await fetch('https://jsonplaceholder.typicode.com/posts');
+    const serverQuotesRaw = await response.json();
+
+    // تحويل البيانات لتوافق هيكل quotes {text, category}
+    const serverQuotes = serverQuotesRaw.slice(0, 5).map(item => ({
+      text: item.title,
+      category: "Server"
+    }));
+
+    // حل التعارض: السيرفر عندو الأولوية
+    let localDataChanged = JSON.stringify(quotes) !== JSON.stringify(serverQuotes);
+    if (localDataChanged) {
+      quotes = serverQuotes;
+      saveQuotes();
+      populateCategories();
+      filterQuotes();
+      showNotification("Quotes updated from server!");
+    }
+  } catch (error) {
+    console.error("Error syncing with server:", error);
+  }
+}
+
+function showNotification(msg) {
+  if (!notification) return;
+  notification.textContent = msg;
+  notification.style.display = "block";
+  setTimeout(() => { notification.style.display = "none"; }, 3000);
+}
+
+// ======================
 // Initialization
 // ======================
 window.onload = () => {
@@ -129,4 +158,7 @@ window.onload = () => {
     const quote = JSON.parse(lastViewed);
     quoteDisplay.textContent = `"${quote.text}" — ${quote.category}`;
   }
+
+  // مزامنة كل دقيقة
+  setInterval(syncWithServer, 60000);
 };

@@ -8,7 +8,7 @@
 <body>
   <h1>Dynamic Quote Generator</h1>
 
-  <!-- مكان عرض الكوت -->
+  <!-- مكان عرض الكوت --
   <div id="quoteDisplay"></div>
 
   <!-- زر عرض كوت جديدة -->
@@ -26,7 +26,7 @@
     <button onclick="exportToJsonFile()">Export Quotes</button>
     <input type="file" id="importFile" accept=".json" onchange="importFromJsonFile(event)" />
   </div>
-
+  <div id="notification" style="display:none; background: #ffeb3b; padding: 10px; margin:10px 0;"></div>
   <script src="script.js"></script>
   <select id="categoryFilter" onchange="filterQuotes()">
   <option value="all">All Categories</option>
